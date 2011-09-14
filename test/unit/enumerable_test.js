@@ -256,10 +256,10 @@ new Test.Unit.Runner({
   
   testZip: function() {
     var result = [1, 2, 3].zip([4, 5, 6], [7, 8, 9]);
-    this.assertEqual('[[1, 4, 7], [2, 5, 8], [3, 6, 9]]', result.inspect());
+    this.assertEqual('[[1,4,7],[2,5,8],[3,6,9]]', result.inspect());
     
     result = [1, 2, 3].zip([4, 5, 6], [7, 8, 9], function(array) { return array.reverse() });
-    this.assertEqual('[[7, 4, 1], [8, 5, 2], [9, 6, 3]]', result.inspect());
+    this.assertEqual('[[7,4,1],[8,5,2],[9,6,3]]', result.inspect());
   },
   
   testSize: function() {
