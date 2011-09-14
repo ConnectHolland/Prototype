@@ -63,8 +63,23 @@ function $(element) {
       elements.push($(arguments[i]));
     return elements;
   }
-  if (Object.isString(element))
-    element = document.getElementById(element);
+  
+  if (Object.isString(element)) {
+    var id = element;
+    element = document.getElementById(id);
+    if (element) {
+      if (Element.readAttribute(element, "id") != id) {
+        element = null;
+        if (Prototype.Browser.IE) {
+          for (var i = 1; i < document.all.length; i++ ) {
+            if (typeof(document.all[i].attributes) != "undefined" && typeof(document.all[i].attributes["id"] ) != "undefined" && document.all[i].attributes["id"].value == id ) {
+              element = document.all[i];
+            }
+          }
+        }
+      }
+    }
+  }
   return Element.extend(element);
 }
 
@@ -279,7 +294,7 @@ Element.Methods = {
    *      // -> true
   **/
   visible: function(element) {
-    return $(element).style.display != 'none';
+    return $(element).getStyle('display') != 'none';
   },
 
   /**
@@ -359,6 +374,10 @@ Element.Methods = {
   **/
   hide: function(element) {
     element = $(element);
+    var originalDisplay = element.getStyle("display");
+    if (originalDisplay && originalDisplay != "none") {
+      element._originalDisplay = originalDisplay;
+    }
     element.style.display = 'none';
     return element;
   },
@@ -408,8 +427,42 @@ Element.Methods = {
   **/
   show: function(element) {
     element = $(element);
-    element.style.display = '';
+    if (element._originalDisplay) {
+      element.style.display = element._originalDisplay;
+      element._originalDisplay = null;
+    }
+    else {
+      element.style.display = '';
+    }
+    if (element.getStyle('display') == 'none') {
+      element.style.display = element.getDefaultDisplay();
+    }
     return element;
+  },
+
+  getDefaultDisplay: function(element) {
+    var container = element.ownerDocument.createElement('div');
+    var tester = Element.extend(document.createElement(element.tagName) );
+    container.appendChild(tester);
+    var display = tester.getStyle('display');
+    if (display == "") { // chrome says display == "" when not in document
+      element.ownerDocument.documentElement.appendChild(container);
+      display = tester.getStyle('display');
+      container.remove();
+    }
+    tester = null;
+    container = null;
+    return display;
+  },
+
+  getTextContent: function(element) {
+    element = $(element);
+    if (element.textContent) {
+      return element.textContent;
+    }
+    else {
+      return element.innerHTML.stripTags().replace(/\r\n/g, "");
+    }
   },
 
   /**
@@ -419,9 +472,9 @@ Element.Methods = {
    *
    *  If you would rather just hide the element and keep it around for further
    *  use, try [[Element.hide]] instead.
-   *  
+   *
    *  ##### Examples
-   *  
+   *
    *      language: html
    *      // Before:
    *      <ul>
@@ -450,6 +503,21 @@ Element.Methods = {
     element.parentNode.removeChild(element);
     return element;
   },
+
+  swapWith: function(element, other) {
+    element = $(element);
+    other = $(other);
+    if (element !== other) {
+      var stub = element.ownerDocument.createElement('div');
+      other = Element.replace(other, stub);
+      element = Element.replace(element, other);
+      stub = Element.replace(stub, element);
+      stub = null; // prevent possible leaks
+    }
+    return element;
+  },
+
+
 
   /**
    *  Element.update(@element[, newContent]) -> Element

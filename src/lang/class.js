@@ -149,6 +149,10 @@ var Class = (function() {
     var ancestor   = this.superclass && this.superclass.prototype,
         properties = Object.keys(source);
 
+    if (typeof(source) == "undefined") { // this fixes some IE7 issue (totally unclear what's causing it), source should never be null here so this check shouldn't hurt at all
+      return this;
+    }
+
     // IE6 doesn't enumerate `toString` and `valueOf` (among other built-in `Object.prototype`) properties,
     // Force copy if they're not Object.prototype ones.
     // Do not copy other Object.prototype.* for performance reasons
@@ -171,15 +175,28 @@ var Class = (function() {
         value.valueOf = method.valueOf.bind(method);
         value.toString = method.toString.bind(method);
       }
+      if (Object.isFunction(value) ) {
+        value.name = property;
+      }
       this.prototype[property] = value;
     }
 
     return this;
   }
 
+  function construct(args) {
+    var init = this.prototype.constructor;
+    this.prototype.constructor = Prototype.emptyFunction;
+    var instance = new this();
+    this.prototype.constructor = init;
+    instance.initialize.apply(instance, $A(args) );
+    return instance;
+  }
+
   return {
     create: create,
     Methods: {
+      construct:  construct,
       addMethods: addMethods
     }
   };

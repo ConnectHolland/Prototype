@@ -108,9 +108,39 @@ Object.extend(Function.prototype, (function() {
   function bind(context) {
     if (arguments.length < 2 && Object.isUndefined(arguments[0])) return this;
     var __method = this, args = slice.call(arguments, 1);
-    return function() {
-      var a = merge(args, arguments);
-      return __method.apply(context, a);
+    // modified to be able to change the value of the arguments
+    var __temp = function() {
+      return __method.apply(context, __temp.args.concat($A(arguments) ) );
+    }
+    __temp.args = args;
+    return __temp;
+  }
+
+  /**
+   * setArgument
+   *
+   * Sets the argument at index (may be integer or string, but string is only allowed if argumentMap is set) to value
+   *
+   * @since Wed May 28 2008
+   * @access public
+   * @param mixed index
+   * @param mixed value
+   * @return boolean
+   **/
+  function setArgument(index, value) {
+    if ( (typeof(index) == "string") && (typeof(this.argumentMap) == "undefined") ) {
+      return false;
+    }
+    else if (typeof(index) == "string") {
+      index = this.argumentMap[index];
+    }
+
+    if (typeof(index) == "number") {
+      this.args[index] = value;
+      return true;
+    }
+    else {
+      return false;
     }
   }
 
@@ -171,10 +201,12 @@ Object.extend(Function.prototype, (function() {
   **/
   function bindAsEventListener(context) {
     var __method = this, args = slice.call(arguments, 1);
-    return function(event) {
+    var __temp = function(event) {
       var a = update([event || window.event], args);
       return __method.apply(context, a);
     }
+    __temp.args = args;
+    return __temp;
   }
 
   /**
@@ -240,6 +272,22 @@ Object.extend(Function.prototype, (function() {
     return window.setTimeout(function() {
       return __method.apply(__method, args);
     }, timeout);
+  }
+
+  /**
+   * repeat
+   *
+   * Repeats a function every * seconds
+   *
+   * @since Fri Jul 4 2008
+   * @access public
+   * @return integer
+   **/
+  function repeat() {
+    var __method = this, args = $A(arguments), interval = args.shift() * 1000;
+    return window.setInterval(function() {
+      return __method.apply(__method, args);
+    }, interval);
   }
 
   /**
@@ -381,9 +429,11 @@ Object.extend(Function.prototype, (function() {
     argumentNames:       argumentNames,
     bind:                bind,
     bindAsEventListener: bindAsEventListener,
+    setArgument:         setArgument,
     curry:               curry,
     delay:               delay,
     defer:               defer,
+    repeat:              repeat,
     wrap:                wrap,
     methodize:           methodize
   }

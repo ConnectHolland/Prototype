@@ -386,7 +386,7 @@ Object.extend(String.prototype, (function() {
    *  an array containing the value returned by each script.
   **/
   function evalScripts() {
-    return this.extractScripts().map(function(script) { return eval(script) });
+    return this.extractScripts().map(function(script) { return eval(script.unescapeHTML() ) });
   }
 
   /** related to: String#unescapeHTML

@@ -278,9 +278,15 @@ var Hash = Class.create(Enumerable, (function() {
    *      h.keys();
    *      // -> ["one", "two", "three"] (has merged contents)
   **/
-  function update(object) {
+  function update(object, recursive) {
+    var recursive = recursive || false;
     return new Hash(object).inject(this, function(result, pair) {
-      result.set(pair.key, pair.value);
+      if (recursive && (typeof(pair.value) == "object") && !Object.isNumber(pair.value) && !Object.isString(pair.value) && !Object.isFunction(pair.value) && !Object.isElement(pair.value) && !Object.isArray(pair.value) ) {
+        result.set(pair.key, $H(result.get(pair.key) ).update($H(pair.value), true).toObject() );
+      }
+      else {
+        result.set(pair.key, pair.value);
+      }
       return result;
     });
   }

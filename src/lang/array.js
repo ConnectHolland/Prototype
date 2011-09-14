@@ -350,6 +350,23 @@ Array.from = $A;
   }
 
   /**
+   *  Array#compare(array) -> Boolean
+   *  - array (Array): The array to compare against
+   *
+   * Compares the Array to the given array, returns true if they are the same
+  **/
+  function compare(array) {
+    if (!array || (this.length != array.length) ) return false;
+    for (var i = 0; i < array.length; i++) {
+      if (this[i].compare) {
+        if (!this[i].compare(array[i])) return false;
+      }
+      else if (this[i] !== array[i]) return false;
+    }
+    return true;
+  }
+
+  /**
    *  Array#intersect(array) -> Array
    *  - array (Array): A collection of values.
    *
@@ -398,7 +415,7 @@ Array.from = $A;
    *      // -> "['Apples', [object Object], 3, 34]"
   **/
   function inspect() {
-    return '[' + this.map(Object.inspect).join(', ') + ']';
+    return '[' + this.map(Object.inspect).join(',') + ']';
   }
 
   /**
@@ -476,6 +493,7 @@ Array.from = $A;
     without:   without,
     reverse:   reverse,
     uniq:      uniq,
+    compare:   compare,
     intersect: intersect,
     clone:     clone,
     toArray:   clone,

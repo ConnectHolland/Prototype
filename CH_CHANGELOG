@@ -1,0 +1,7 @@
+Alle CH changes zijn overgenomen, m.u.v. de volgende:
+
+* Fix aan Element#relativize weggelaten (http://kiks/trac/changeset/32596/prototype/test/1.6.1/src/dom/dom.js)
+* Wijziging m.b.t. post en get weggelaten (http://kiks/trac/changeset/32596/prototype/test/1.6.1/src/ajax/request.js)
+* allowStatusZero weggelaten (http://kiks/trac/changeset/32596/prototype/test/1.6.1/src/ajax/request.js)
+* IE9 fix voor Event.stop zit al in 1.7, dus weggelaten (http://kiks/trac/changeset/50662/prototype/test/1.6.1/src/dom/event.js)
+* Object#toJSON wijzigingen lijken niet meer nodig (http://kiks/trac/changeset/32596/prototype/test/1.6.1/src/lang/object.js)

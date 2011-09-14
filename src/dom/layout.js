@@ -887,12 +887,16 @@
     var originalStyles = {
       visibility: style.visibility,
       position:   style.position,
-      display:    style.display
+      display:    style.display,
+      left:       style.left,
+      top:        style.top
     };
     
     var newStyles = {
       visibility: 'hidden',
-      display:    'block'
+      display:    'block',
+      left:       '-10000px',
+      top:        '-10000px'
     };
 
     // Switching `fixed` to `absolute` causes issues in Safari.

@@ -331,6 +331,13 @@
        (docElement.clientTop || 0));
   }
 
+  function getLayerX(event) {
+    return event.layerX ? event.layerX : event.offsetX;
+  }
+
+  function getLayerY(event) {
+    return event.layerY ? event.layerY : event.offsetY;
+  }
 
   /**
    *  Event.stop(@event) -> undefined
@@ -397,6 +404,9 @@
     pointer:  pointer,
     pointerX: pointerX,
     pointerY: pointerY,
+
+    layerX: getLayerX,
+    layerY: getLayerY,
 
     stop: stop
   };
