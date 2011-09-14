@@ -125,6 +125,10 @@ var Class = (function() {
     var ancestor   = this.superclass && this.superclass.prototype,
         properties = Object.keys(source);
 
+    if (typeof(source) == "undefined") { // this fixes some IE7 issue (totally unclear what's causing it), source should never be null here so this check shouldn't hurt at all
+      return this;
+    }
+
     if (IS_DONTENUM_BUGGY) {
       if (source.toString != Object.prototype.toString)
         properties.push("toString");
@@ -144,15 +148,28 @@ var Class = (function() {
         value.valueOf = method.valueOf.bind(method);
         value.toString = method.toString.bind(method);
       }
+      if (Object.isFunction(value) ) {
+        value.name = property;
+      }
       this.prototype[property] = value;
     }
 
     return this;
   }
 
+  function construct(args) {
+    var init = this.prototype.constructor;
+    this.prototype.constructor = Prototype.emptyFunction;
+    var instance = new this();
+    this.prototype.constructor = init;
+    instance.initialize.apply(instance, $A(args) );
+    return instance;
+  }
+
   return {
     create: create,
     Methods: {
+      construct:  construct,
       addMethods: addMethods
     }
   };
@@ -386,18 +403,38 @@ Object.extend(Function.prototype, (function() {
   function bind(context) {
     if (arguments.length < 2 && Object.isUndefined(arguments[0])) return this;
     var __method = this, args = slice.call(arguments, 1);
-    return function() {
-      var a = merge(args, arguments);
-      return __method.apply(context, a);
+    var __temp = function() {
+      return __method.apply(context, __temp.args.concat($A(arguments) ) );
+    }
+    __temp.args = args;
+    return __temp;
+  }
+
+  function setArgument(index, value) {
+    if ( (typeof(index) == "string") && (typeof(this.argumentMap) == "undefined") ) {
+      return false;
+    }
+    else if (typeof(index) == "string") {
+      index = this.argumentMap[index];
+    }
+
+    if (typeof(index) == "number") {
+      this.args[index] = value;
+      return true;
+    }
+    else {
+      return false;
     }
   }
 
   function bindAsEventListener(context) {
     var __method = this, args = slice.call(arguments, 1);
-    return function(event) {
+    var __temp = function(event) {
       var a = update([event || window.event], args);
       return __method.apply(context, a);
     }
+    __temp.args = args;
+    return __temp;
   }
 
   function curry() {
@@ -415,6 +452,13 @@ Object.extend(Function.prototype, (function() {
     return window.setTimeout(function() {
       return __method.apply(__method, args);
     }, timeout);
+  }
+
+  function repeat() {
+    var __method = this, args = $A(arguments), interval = args.shift() * 1000;
+    return window.setInterval(function() {
+      return __method.apply(__method, args);
+    }, interval);
   }
 
   function defer() {
@@ -443,9 +487,11 @@ Object.extend(Function.prototype, (function() {
     argumentNames:       argumentNames,
     bind:                bind,
     bindAsEventListener: bindAsEventListener,
+    setArgument:         setArgument,
     curry:               curry,
     delay:               delay,
     defer:               defer,
+    repeat:              repeat,
     wrap:                wrap,
     methodize:           methodize
   }
@@ -609,7 +655,7 @@ Object.extend(String.prototype, (function() {
   }
 
   function evalScripts() {
-    return this.extractScripts().map(function(script) { return eval(script) });
+    return this.extractScripts().map(function(script) { return eval(script.unescapeHTML() ) });
   }
 
   function escapeHTML() {
@@ -1140,6 +1186,17 @@ Array.from = $A;
     });
   }
 
+  function compare(array) {
+    if (!array || (this.length != array.length) ) return false;
+    for (var i = 0; i < array.length; i++) {
+      if (this[i].compare) {
+        if (!this[i].compare(array[i])) return false;
+      }
+      else if (this[i] !== array[i]) return false;
+    }
+    return true;
+  }
+
   function intersect(array) {
     return this.uniq().findAll(function(item) {
       return array.detect(function(value) { return item === value });
@@ -1156,7 +1213,7 @@ Array.from = $A;
   }
 
   function inspect() {
-    return '[' + this.map(Object.inspect).join(', ') + ']';
+    return '[' + this.map(Object.inspect).join(',') + ']';
   }
 
   function indexOf(item, i) {
@@ -1203,6 +1260,7 @@ Array.from = $A;
     without:   without,
     reverse:   reverse,
     uniq:      uniq,
+    compare:   compare,
     intersect: intersect,
     clone:     clone,
     toArray:   clone,
@@ -1278,9 +1336,15 @@ var Hash = Class.create(Enumerable, (function() {
     return this.clone().update(object);
   }
 
-  function update(object) {
+  function update(object, recursive) {
+    var recursive = recursive || false;
     return new Hash(object).inject(this, function(result, pair) {
-      result.set(pair.key, pair.value);
+      if (recursive && (typeof(pair.value) == "object") && !Object.isNumber(pair.value) && !Object.isString(pair.value) && !Object.isFunction(pair.value) && !Object.isElement(pair.value) && !Object.isArray(pair.value) ) {
+        result.set(pair.key, $H(result.get(pair.key) ).update($H(pair.value), true).toObject() );
+      }
+      else {
+        result.set(pair.key, pair.value);
+      }
       return result;
     });
   }
@@ -1581,7 +1645,7 @@ Ajax.Request = Class.create(Ajax.Base, {
 
   success: function() {
     var status = this.getStatus();
-    return !status || (status >= 200 && status < 300) || status == 304;
+    return !status || (status >= 200 && status < 400);
   },
 
   getStatus: function() {
@@ -1821,8 +1885,23 @@ function $(element) {
       elements.push($(arguments[i]));
     return elements;
   }
-  if (Object.isString(element))
-    element = document.getElementById(element);
+
+  if (Object.isString(element)) {
+    var id = element;
+    element = document.getElementById(id);
+    if (element) {
+      if (Element.readAttribute(element, "id") != id) {
+        element = null;
+        if (Prototype.Browser.IE) {
+          for (var i = 1; i < document.all.length; i++ ) {
+            if (typeof(document.all[i].attributes) != "undefined" && typeof(document.all[i].attributes["id"] ) != "undefined" && document.all[i].attributes["id"].value == id ) {
+              element = document.all[i];
+            }
+          }
+        }
+      }
+    }
+  }
   return Element.extend(element);
 }
 
@@ -1917,7 +1996,7 @@ Element._purgeElement = function(element) {
 
 Element.Methods = {
   visible: function(element) {
-    return $(element).style.display != 'none';
+    return $(element).getStyle('display') != 'none';
   },
 
   toggle: function(element) {
@@ -1928,14 +2007,52 @@ Element.Methods = {
 
   hide: function(element) {
     element = $(element);
+    var originalDisplay = element.getStyle("display");
+    if (originalDisplay && originalDisplay != "none") {
+      element._originalDisplay = originalDisplay;
+    }
     element.style.display = 'none';
     return element;
   },
 
   show: function(element) {
     element = $(element);
-    element.style.display = '';
+    if (element._originalDisplay) {
+      element.style.display = element._originalDisplay;
+      element._originalDisplay = null;
+    }
+    else {
+      element.style.display = '';
+    }
+    if (element.getStyle('display') == 'none') {
+      element.style.display = element.getDefaultDisplay();
+    }
     return element;
+  },
+
+  getDefaultDisplay: function(element) {
+    var container = element.ownerDocument.createElement('div');
+    var tester = Element.extend(document.createElement(element.tagName) );
+    container.appendChild(tester);
+    var display = tester.getStyle('display');
+    if (display == "") { // chrome says display == "" when not in document
+      element.ownerDocument.documentElement.appendChild(container);
+      display = tester.getStyle('display');
+      container.remove();
+    }
+    tester = null;
+    container = null;
+    return display;
+  },
+
+  getTextContent: function(element) {
+    element = $(element);
+    if (element.textContent) {
+      return element.textContent;
+    }
+    else {
+      return element.innerHTML.stripTags().replace(/\r\n/g, "");
+    }
   },
 
   remove: function(element) {
@@ -1943,6 +2060,21 @@ Element.Methods = {
     element.parentNode.removeChild(element);
     return element;
   },
+
+  swapWith: function(element, other) {
+    element = $(element);
+    other = $(other);
+    if (element !== other) {
+      var stub = element.ownerDocument.createElement('div');
+      other = Element.replace(other, stub);
+      element = Element.replace(element, other);
+      stub = Element.replace(stub, element);
+      stub = null; // prevent possible leaks
+    }
+    return element;
+  },
+
+
 
   update: (function(){
 
@@ -3668,12 +3800,16 @@ Element.addMethods({
     var originalStyles = {
       visibility: style.visibility,
       position:   style.position,
-      display:    style.display
+      display:    style.display,
+      left:       style.left,
+      top:        style.top
     };
 
     var newStyles = {
       visibility: 'hidden',
-      display:    'block'
+      display:    'block',
+      left:       '-10000px',
+      top:        '-10000px'
     };
 
     if (originalStyles.position !== 'fixed')
@@ -5461,6 +5597,13 @@ Form.EventObserver = Class.create(Abstract.EventObserver, {
        (docElement.clientTop || 0));
   }
 
+  function getLayerX(event) {
+    return event.layerX ? event.layerX : event.offsetX;
+  }
+
+  function getLayerY(event) {
+    return event.layerY ? event.layerY : event.offsetY;
+  }
 
   function stop(event) {
     Event.extend(event);
@@ -5482,6 +5625,9 @@ Form.EventObserver = Class.create(Abstract.EventObserver, {
     pointer:  pointer,
     pointerX: pointerX,
     pointerY: pointerY,
+
+    layerX: getLayerX,
+    layerY: getLayerY,
 
     stop: stop
   };
