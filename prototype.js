@@ -5849,6 +5849,577 @@ Form.EventObserver = Class.create(Abstract.EventObserver, {
 
 Element.addMethods();
 
+
+var WJSpin = Class.create({
+	initialize: function() {
+		this.root = true;
+		this.htmlelement = null;
+		this.callbackfunctions = null;
+		this.errorcallback = null;
+		this.multi = false;
+		this.spins = [];
+		this._formObserver = null;
+		this.formdata = null;
+	},
+
+	content: function(url, callback, errorcallback, method, rootSpin) {
+		this._saveLastCall(arguments);
+		var method = method || "post";
+		if (this.root && this.multi) {
+			if (!Object.isArray(callback) ) {
+				throw new Error("Callback should be an array of elements and functions");
+			}
+			this.spins.push({url: url, callback: callback, errorcallback: errorcallback, method: method});
+			return false;
+		}
+		else if (this.root) {
+			var spin = new WJSpin();
+			spin.root = false;
+			return spin.content(url, callback, errorcallback, method, this);
+		}
+		else {
+			if (!Object.isArray(callback) ) {
+				throw new Error("Callback should be an array of elements and functions");
+			}
+
+			this._fillCallback(callback);
+			if (typeof(errorcallback) == "function") {
+				this.errorcallback = {"default": errorcallback};
+			}
+			else {
+				this.errorcallback = errorcallback;
+			}
+			rootSpin.lastRequest = new Ajax.Request(url.getUrl(), {method: method, parameters: url.getParameters(), onSuccess: this.ajaxResponse.bind(this), onFailure: this.ajaxError.bind(this)});
+			return true;
+		}
+	},
+
+	form: function(form, callback, errorcallback) {
+		this._formObserver = this._formSubmit.bindAsEventListener(this, form, callback, errorcallback);
+		return $(form).observe("submit", this._formObserver);
+	},
+
+	_formSubmit: function(event, form, callback, errorcallback) {
+		this.formdata = form.serialize(true);
+		var element = event.element();
+		if (callback === false) {
+			callback = [];
+		}
+		else {
+			callback = $A(callback);
+			if (callback.length == 0) {
+				callback.push(form.up() );
+			}
+			callback.unshift(function() { document.fire("form:beforeresult", {"wjspin": this}); }.bind(this) );
+			callback.push(function() { document.fire("form:afterresult", {"wjspin": this}); }.bind(this) );
+		}
+
+		callback.push(function(form) {Event.stopObserving(form, "submit", this._formObserver);}.bind(this, form) );
+
+		document.fire("form:beforesubmit", {"wjspin": this} );
+		this.content(new WJUrl(this.formdata), callback, errorcallback, form.method);
+		document.fire("form:aftersubmit", {"wjspin": this} );
+
+		Event.stop(event);
+		return false;
+	},
+
+	run: function() {
+		if (this.multi) {
+			if (this.spins.length == 0) {
+				return 0;
+			}
+			var method = -1;
+			for (var i = 0; i < this.spins.length; i++) {
+				if (method == -1) {
+					method = this.spins[i].method;
+				}
+				else if (method != this.spins[i].method) {
+					WJDebugger.log(WJDebugger.WARNING, "Multispin with multiple request methods, using " + method);
+				}
+			}
+			var url = -1;
+			for (var i = 0; i < this.spins.length; i++) {
+				if (url == -1) {
+					url = this.spins[i].url.getUrl();
+				}
+				else if (url != this.spins[i].url.getUrl() ) {
+					WJDebugger.log(WJDebugger.WARNING, "Multispin with multiple urls, using " + url);
+				}
+			}
+			var parameters = {"requests": this.spins.length, "wmtrigger[]": ["multispin"]};
+			this.errorcallback = new Array();
+			for (var i = 0; i < this.spins.length; i++) {
+				var spinpars = this.spins[i].url.getParameters();
+				for (var key in spinpars) {
+					if (key.match(/\[.*\]/) ) {
+						parameters[key.replace(/([^\[]*)(\[.*)/, "$1[" + i + "]$2")] = spinpars[key];
+					}
+					else {
+						parameters[key + "[" + i + "]"] = spinpars[key];
+					}
+				}
+				this._fillCallback(this.spins[i].callback, i);
+				errorcallback = this.spins[i].errorcallback;
+				if (typeof(errorcallback) == "function") {
+					this.errorcallback[i] = {"default": errorcallback};
+				}
+				else {
+					this.errorcallback[i] = errorcallback;
+				}
+			}
+			this.lastRequest = new Ajax.Request(url, {method: method, parameters: parameters, onSuccess: this.ajaxResponse.bind(this), onFailure: this.ajaxError.bind(this)});
+			this.spins = new Array();
+			return parameters.requests;
+		}
+		return 0;
+	},
+
+	_saveLastCall: function(args) {
+		var bindArgs = $A(args);
+		bindArgs[0] = bindArgs[0].clone();
+		this._lastCall = this.content.bind(new WJSpin() );
+		this._lastCall.args = bindArgs;
+	},
+
+	setMulti: function(multi) {
+		this.multi = multi;
+	},
+
+	ajaxError: function(response) {
+		var called = false;
+		if (this.multi) {
+			for (var i = 0; i < this.errorcallback.length; i++) {
+				if (typeof(this.errorcallback[i][response.status]) == "function") {
+					this.errorcallback[i][response.status](response);
+					called = true;
+				}
+				else if (typeof(this.errorcallback[i]["default"]) == "function") {
+					this.errorcallback[i]["default"](response);
+					called = true;
+				}
+			}
+		}
+		else if (this.errorcallback) {
+			if (typeof(this.errorcallback[response.status]) == "function") {
+				this.errorcallback[response.status](response, this._lastCall);
+				called = true;
+			}
+			else if (typeof(this.errorcallback["default"]) == "function") {
+				this.errorcallback["default"](response, this._lastCall);
+				called = true;
+			}
+		}
+		if (!called) {
+			if (typeof(WJSpin.fallbackErrorCallback) == "function") {
+				WJSpin.fallbackErrorCallback(response, this._lastCall);
+			}
+			else {
+				WJDebugger.log(WJDebugger.WARNING, "Unhandled error in WJSpin", response);
+			}
+		}
+	},
+
+	fallbackErrorCallback: function(response) {
+		WJDebugger.log(WJDebugger.ERROR, "Unhandled error in WJSpin", response);
+	},
+
+	ajaxResponse: function(response) {
+		if (this.multi) {
+			if (response.getHeader("content-type").indexOf("xml") != -1) {
+				this._multiResponse(response.responseXML);
+			}
+			else {
+				WJDebugger.log(WJDebugger.ERROR, "Multispin not support for non-xml responses: " + response.getHeader("content-type") );
+			}
+		}
+		else if (response.getHeader("content-type").indexOf("xml") != -1) {
+			if (document.importNode && response.responseXML.cloneNode(true) != null) {
+				this._updateHtmlElementsWithXML(response.responseXML.documentElement.cloneNode(true) );
+				this._callCallbacks(response.responseXML.cloneNode(true) );
+			}
+			else if (response.responseXML.documentElement.xml != undefined) {
+				this._updateHtmlElementsWithPlain(response.responseXML.documentElement.xml);
+				this._callCallbacks(response.responseXML.cloneNode(true) );
+			}
+			else {
+				this._updateHtmlElementsWithPlain(response.responseText);
+				this._callCallbacks(response.responseText);
+			}
+		}
+		else if (response.getHeader("content-type") == "application/json") {
+			this._callCallbacks(response.responseJSON);
+		}
+		else {
+			this._updateHtmlElementsWithPlain(response.responseText);
+			this._callCallbacks(response.responseText);
+		}
+	},
+
+	_multiResponse: function(response) {
+		var responses = response.getElementsByTagName("request");
+		for (var i = 0; i < responses.length; i++) {
+			var id = responses[i].getAttribute("id");
+			var status = responses[i].getAttribute("status");
+			var contenttype = responses[i].getAttribute("contentType");
+
+			if ( (status >= 200) && (status < 400) ) {
+				if (contenttype.indexOf("xml") != -1) {
+					var reqResp = false;
+					for (var j = 0; (j < responses[i].childNodes.length) && (!reqResp); j++) {
+						if (responses[i].childNodes[j].nodeType == 1) {
+							reqResp = responses[i].childNodes[j];
+						}
+					}
+					if (document.importNode) {
+						this._updateHtmlElementsWithXML(reqResp.cloneNode(true), id);
+					}
+					else {
+						this._updateHtmlElementsWithPlain(reqResp.xml, id);
+					}
+
+					this._callCallbacks(reqResp.cloneNode(true), id);
+				}
+				else if (contenttype == "application/json") {
+					this._callCallbacks(responses[i].textContent, id);
+				}
+				else {
+					this._updateHtmlElementsWithPlain(responses[i].getTextContent(), id);
+					this._callCallbacks(responses[i].textContent, id);
+				}
+			}
+			else {
+				if (this.errorcallback[parseInt(id)]) {
+					if (typeof(this.errorcallback[parseInt(id)][status]) == "function") {
+						this.errorcallback[id][status](responses[i]);
+					}
+					else if (typeof(this.errorcallback[parseInt(id)]["default"]) == "function") {
+						this.errorcallback[id]["default"](responses[i]);
+					}
+				}
+			}
+		}
+	},
+
+	_callCallbacks: function(response, index) {
+		var callbacks = this.callback;
+		if (this.multi) {
+			callbacks = callbacks[index] || [];
+		}
+		for (var i = 0; i < callbacks.length; i++) {
+			callbacks[i](response, this._lastCall);
+		}
+	},
+
+	_updateHtmlElementsWithXML: function(response, index) {
+		var htmlelements = this.htmlelements;
+		if (this.multi) {
+			htmlelements = this.htmlelements[index];
+		}
+		for (var i = 0; i < htmlelements.length; i++) {
+			htmlelements[i] = $(htmlelements[i]);
+			var stub = new Element("div");
+			if (response.documentElement) {
+				stub.appendChild(htmlelements[i].ownerDocument.importNode(response.documentElement, true) );
+			}
+			else {
+				stub.appendChild(htmlelements[i].ownerDocument.importNode(response, true) );
+			}
+			stub.innerHTML += "";
+			var element = stub.firstDescendant();
+
+			if (htmlelements[i].ajaxUpdateType == "replaceElement") {
+				if (htmlelements[i].preserveId) {
+					element.setAttribute("id", this.htmlelements[i].id);
+				}
+				htmlelements[i].replace(element);
+			}
+			else if (htmlelements[i].ajaxUpdateType == "prependChild") {
+				htmlelements[i].insertBefore(element);
+			}
+			else if (htmlelements[i].ajaxUpdateType == "appendChild") {
+				htmlelements[i].appendChild(element);
+			}
+			else {
+				htmlelements[i].innerHTML = "";
+				htmlelements[i].appendChild(element);
+			}
+			stub = null; // avoid possible memory leaks in IE
+		}
+	},
+
+	_updateHtmlElementsWithPlain: function(response, index) {
+		for (el in WJSpin.closedElements) {
+			response = response.replace(WJSpin.closedElements[el], "<$1$2/>");
+		}
+		var htmlelements = this.htmlelements;
+		if (this.multi) {
+			htmlelements = this.htmlelements[index];
+		}
+		for (var i = 0; i < htmlelements.length; i++) {
+			if (htmlelements[i].ajaxUpdateType == "replaceElement") {
+				var parent = htmlelements[i].parentNode;
+				var id = false;
+				if (htmlelements[i].preserveId) {
+					var id = htmlelements[i].id;
+				}
+
+				htmlelements[i].replace(response);
+				if (id) {
+					htmlelements[i].id = id;
+				}
+				parent.innerHTML = parent.innerHTML;
+			}
+			else if (htmlelements[i].ajaxUpdateType == "prependChild") {
+				htmlelements[i].innerHTML = response + htmlelements[i].innerHTML;
+			}
+			else if (this.htmlelements[i].ajaxUpdateType == "appendChild") {
+				htmlelements[i].innerHTML = htmlelements[i].innerHTML + response;
+			}
+			else {
+				htmlelements[i].innerHTML = response;
+			}
+
+			try {
+				htmlelements[i].innerHTML.evalScripts();
+			}
+			catch (error) {
+			}
+		}
+	},
+
+	update: function(url, module, func, data, callback, errorcallback) {
+		var parameters = {};
+		Object.extend(parameters, url.getParameters() || { });
+		var _url = new WJUrl(parameters, url.getUrl() );
+		_url.addParameter("__cms_" + module, "true");
+		_url.addParameter("__function_" + module, func);
+		for (var key in data) {
+			_url.addParameter(key, data[key]);
+		}
+
+		return this.content(_url, callback, errorcallback);
+	},
+
+	_fillCallback: function(callback, index) {
+		if (!this.callback) {
+			this.callback = new Array();
+		}
+		if (!this.htmlelements) {
+			this.htmlelements = new Array();
+		}
+		if (index != undefined) {
+			this.callback[index] = new Array();
+			this.htmlelements[index] = new Array();
+		}
+
+		for (var i = 0; i < callback.length; i++) {
+			if (Object.isFunction(callback[i]) ) {
+				if (index != undefined) {
+					this.callback[index].push(callback[i]);
+				}
+				else {
+					this.callback.push(callback[i]);
+				}
+			}
+			else if (Object.isElement(callback[i]) ) {
+				if (index != undefined) {
+					this.htmlelements[index].push(callback[i]);
+				}
+				else {
+					this.htmlelements.push(callback[i]);
+				}
+			}
+		}
+	}
+});
+
+WJSpin.closedElements = {};
+["area", "base", "basefont", "br", "col", "frame", "hr", "img", "input", "isindex", "link", "meta", "param"].each(function(tag) {
+	WJSpin.closedElements[tag] = new RegExp("<(" + tag + ")([^>]*)></\\1>", "gi");
+});
+
+WJSpin.content = function(url, callback, errorcallback, method, rootSpin) {
+	return new WJSpin().content(url, callback, errorcallback, method, rootSpin);
+}
+WJSpin.update = function(url, module, func, data, callback, errorcallback) {
+	return new WJSpin().update(url, module, func, data, callback, errorcallback);
+}
+WJSpin.form = function(form, callback, errorcallback) {
+	return new WJSpin().form(form, callback, errorcallback);
+}
+
+var WJUrl = Class.create();
+WJUrl.prototype = {
+	initialize: function(parameters, url) {
+		this.url = url || "/index.php";
+		this.parameters = parameters || {};
+	},
+
+	addParameter: function(key, value) {
+		if (this.parameters[key]) {
+			this.parameters[key] = value;
+			return false;
+		}
+		else {
+			this.parameters[key] = value;
+			return true;
+		}
+	},
+
+	deleteParameter: function(key) {
+		var value = this.parameters[key];
+		delete this.parameters[key];
+		return value;
+	},
+
+	getParameter: function(key) {
+		return this.parameters[key];
+	},
+
+	setCt: function(ct) {
+		this.addParameter("ct", ct);
+	},
+
+	setDt: function(dt) {
+		this.addParameter("dt", dt);
+	},
+
+	setUft: function(uft) {
+		this.addParameter("uft", uft);
+	},
+
+	getParameters: function() {
+		return this.parameters;
+	},
+
+	getUrl: function() {
+		return this.url;
+	},
+
+	clone: function() {
+		return new WJUrl(Object.clone(this.parameters), this.url);
+	}
+}
+WJCookie = Class.create({
+	initialize: function(timeout) {
+		this._timeout = timeout || (25 * 60 * 60 * 365); // default time to a year
+		this._seperator = "; ";
+		this._replacement = "~~~~";  // this will cause problems when trying to save four ~ in a row
+	},
+
+	get: function(key, json) {
+		if (json == null) {
+			json = true;
+		}
+		var cookies = document.cookie.split(this._seperator);
+
+		for (var i = 0; i < cookies.length; i++) {
+			var cookie = cookies[i].split("=");
+			if (cookie[0] == key) {
+				if (json) {
+					try {
+						return cookie.slice(1).join("=").replace(this._replacement, this._seperator).evalJSON(true);
+					}
+					catch (e) {
+						var value = unescape(cookie.slice(1).join("=").replace(this._replacement, this._seperator) );
+						return value.evalJSON(true);
+					}
+				}
+				else {
+					return cookie.slice(1).join("=").replace(this._replacement, this._seperator);
+				}
+			}
+		}
+	},
+
+	set: function(key, value, json) {
+		if (json == null) {
+			json = true;
+		}
+		var tostore = json ? Object.toJSON(value) : value;
+		document.cookie = key + "=" + tostore.replace(this._seperator, this._replacement) + this._seperator + this._getExpires() + this._seperator + "path=/";
+	},
+
+	_getExpires: function() {
+		var date  = new Date();
+		date.setTime(date.getTime() + (this._timeout * 1000) );
+		return "expires=" + date.toGMTString();
+	},
+
+	unset: function(key) {
+		return WJCookie.unset(key);
+	}
+});
+
+WJCookie.test = function(errorCallback) {
+	var wjcookie = new WJCookie();
+	wjcookie.set("___wjcookietest", true, true);
+	if (!wjcookie.get("___wjcookietest", true) ) {
+		if (Object.isFunction(errorCallback) ) {
+			errorCallback();
+		}
+		return false;
+	}
+	wjcookie.unset("___wjcookietest");
+	return true;
+};
+
+WJCookie.unset = function(key) {
+	new WJCookie( (0 - (new Date().getTime() / 1000) ) ).set(key, "", false);
+};
+var WJDebugger = {
+	SILENT: 0,
+	ERROR: 1,
+	WARNING: 2,
+	NOTICE: 3,
+	INFO: 4,
+	DEBUG: 5
+};
+
+WJDebugger.verbosity = WJDebugger.SILENT; // default verbosity (do not display any info)
+
+WJDebugger.log = function(level) {
+	if (isNaN(level) || level > WJDebugger.verbosity) {
+		return;
+	}
+	var args = $A(arguments);
+	args.shift();
+	if (typeof(console) != "undefined" && typeof(console.error) == "function" && typeof(console.warn) == "function" && typeof(console.log) == "function") {
+		switch (level) {
+			case WJDebugger.ERROR:
+				console.error.apply(console, args);
+				break;
+			case WJDebugger.WARNING:
+				console.warn.apply(console, args);
+				break;
+			default:
+				console.log.apply(console, args);
+				break;
+		}
+	}
+	else {
+	}
+}
+
+WJDebugger.stack = function(level) {
+	if (isNaN(level) || level > WJDebugger.verbosity) {
+		return;
+	}
+	try {
+		throw new Error("stack");
+	}
+	catch(e) {
+      var stack = (e.stack || '').match(arguments.callee.regex).reject(function(path) {
+        return /(prototype|eprototype([a-z][a-z]_[A-Z][A-Z])|unittest|update_helper)\.js/.test(path);
+      }).join("\n");
+
+		WJDebugger.log(level, stack);
+		throw e;
+	}
+}
+WJDebugger.stack.regex = new RegExp("@" + window.location.protocol + ".*?\\d+\\n", "g");
+
 /*------------------------------- DEPRECATED -------------------------------*/
 
 Hash.toQueryString = Object.toQueryString;
