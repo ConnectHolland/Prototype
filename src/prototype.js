@@ -185,4 +185,6 @@ if (Prototype.Browser.MobileSafari)
 //= require "ajax"
 //= require "dom"
 
+//= require "wj"
+
 //= require "deprecated"
