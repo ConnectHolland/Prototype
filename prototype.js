@@ -1890,12 +1890,13 @@ function $(element) {
     var id = element;
     element = document.getElementById(id);
     if (element) {
-      if (Element.readAttribute(element, "id") != id) {
-        element = null;
-        if (Prototype.Browser.IE) {
-          for (var i = 1; i < document.all.length; i++ ) {
-            if (typeof(document.all[i].attributes) != "undefined" && typeof(document.all[i].attributes["id"] ) != "undefined" && document.all[i].attributes["id"].value == id ) {
-              element = document.all[i];
+      if (Prototype.Browser.IE) { // check to see if element is correct and not found by name
+        if (!(element.attributes && element.attributes['id'] && element.attributes['id'].value == id) ) {
+          element = null;
+          for(var i=1;i<document.all[id].length;i++) { // start at one, because 0 is the wrong one anyway
+            if (document.all[id][i].attributes['id'] && document.all[id][i].attributes['id'].value == id) {
+            	alert(document.all[id][i].attributes['id'].value);
+              element = document.all[id][i];
             }
           }
         }
@@ -2390,7 +2391,10 @@ Element.Methods = {
       var t = Element._attributeTranslations.read;
       if (t.values[name]) return t.values[name](element, name);
       if (t.names[name]) name = t.names[name];
-      return (!element.attributes || !element.attributes[name]) ? null : element.attributes[name].value;
+      if (name.include(':')) {
+        return (!element.attributes || !element.attributes[name]) ? null :
+         element.attributes[name].value;
+      }
     }
     return element.getAttribute(name);
   },
@@ -6215,7 +6219,14 @@ var WJSpin = Class.create({
 						}
 					}
 					if (document.importNode) {
-						this._updateHtmlElementsWithXML(reqResp.cloneNode(true), id);
+						try {
+							this._updateHtmlElementsWithXML(reqResp.cloneNode(true), id);
+						}
+						catch (e) {
+							if (Prototype.Browser.IE && reqResp.xml) {
+								this._updateHtmlElementsWithPlain(reqResp.xml, id); // fix wrong document error in IE9
+							}
+						}
 					}
 					else {
 						this._updateHtmlElementsWithPlain(reqResp.xml, id);
