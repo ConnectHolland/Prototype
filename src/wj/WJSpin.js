@@ -360,7 +360,14 @@ var WJSpin = Class.create({
 						}
 					}
 					if (document.importNode) {
-						this._updateHtmlElementsWithXML(reqResp.cloneNode(true), id);
+						try {
+							this._updateHtmlElementsWithXML(reqResp.cloneNode(true), id);
+						}
+						catch (e) {
+							if (Prototype.Browser.IE && reqResp.xml) {
+								this._updateHtmlElementsWithPlain(reqResp.xml, id); // fix wrong document error in IE9
+							}
+						}
 					}
 					else {
 						this._updateHtmlElementsWithPlain(reqResp.xml, id);

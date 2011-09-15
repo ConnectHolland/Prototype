@@ -21,6 +21,7 @@ new Test.Unit.Runner({
     this.assertEnumEqual([$('fixtures')], $$('#fixtures'));
     this.assertEnumEqual([], $$('#nonexistent'));
     this.assertEnumEqual([$('troubleForm')], $$('#troubleForm'));
+    this.assertEqual('em', $('named').tagName.toLowerCase() );
   },
   
   testSelectorWithClassName: function() {

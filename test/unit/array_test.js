@@ -126,7 +126,7 @@ new Test.Unit.Runner({
     this.assertEqual('[]',[].inspect());
     this.assertEqual('[1]',[1].inspect());
     this.assertEqual('[\'a\']',['a'].inspect());
-    this.assertEqual('[\'a\', 1]',['a',1].inspect());
+    this.assertEqual('[\'a\',1]',['a',1].inspect());
   },
   
   testIntersect: function(){
@@ -190,6 +190,6 @@ new Test.Unit.Runner({
   testEachOnSparseArrays: function() {
     var sparseArray = [0, 1];
     sparseArray[5] = 5;
-    this.assertEqual('[0, 1, 5]', sparseArray.inspect(), "Array#each should skip nonexistent keys in an array");
+    this.assertEqual('[0,1,5]', sparseArray.inspect(), "Array#each should skip nonexistent keys in an array");
   }
 });
