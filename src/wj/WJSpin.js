@@ -113,6 +113,9 @@ var WJSpin = Class.create({
 	 * @return boolean
 	 **/
 	_formSubmit: function(event, form, callback, errorcallback) {
+		if (form.getInputs("file").length > 0) {
+			WJDebugger.log(WJDebugger.WARNING, "File uploads using WJSpin or not supported");
+		}
 		this.formdata = form.serialize(true);
 		var element = event.element();
 		if (callback === false) {
