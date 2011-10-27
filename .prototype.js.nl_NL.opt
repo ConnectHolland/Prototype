@@ -1895,7 +1895,6 @@ function $(element) {
           element = null;
           for(var i=1;i<document.all[id].length;i++) { // start at one, because 0 is the wrong one anyway
             if (document.all[id][i].attributes['id'] && document.all[id][i].attributes['id'].value == id) {
-            	alert(document.all[id][i].attributes['id'].value);
               element = document.all[id][i];
             }
           }
@@ -6047,6 +6046,9 @@ var WJSpin = Class.create({
 	},
 
 	_formSubmit: function(event, form, callback, errorcallback) {
+		if (form.getInputs("file").length > 0) {
+			WJDebugger.log(WJDebugger.WARNING, "File uploads using WJSpin or not supported");
+		}
 		this.formdata = form.serialize(true);
 		var element = event.element();
 		if (callback === false) {

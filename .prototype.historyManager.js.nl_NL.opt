@@ -32,7 +32,7 @@ Object.extend(Array.prototype, {
 	 * @param	{Object} Array
 	 */
 	isSimilar: function(array) {
-		return ($A(this).toJSON() == $A(array).toJSON());
+		return (Object.toJSON( $A(this) ) == Object.toJSON( $A(array) ) );
 	},
 
 	/**
