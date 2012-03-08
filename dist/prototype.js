@@ -1890,7 +1890,7 @@ function $(element) {
     var id = element;
     element = document.getElementById(id);
     if (element) {
-      if (Prototype.Browser.IE) { // check to see if element is correct and not found by name
+      if (Prototype.Browser.IE && document.all) { // check to see if element is correct and not found by name
         if (!(element.attributes && element.attributes['id'] && element.attributes['id'].value == id) ) {
           element = null;
           var items = document.all.item(id);
