@@ -76,7 +76,7 @@ var WJSpin = Class.create({
 			else {
 				this.errorcallback = errorcallback;
 			}
-			rootSpin.lastRequest = new Ajax.Request(url.getUrl(), {method: method, parameters: url.getParameters(), onSuccess: this.ajaxResponse.bind(this), onFailure: this.ajaxError.bind(this)});
+			rootSpin.lastRequest = new Ajax.Request(url.getUrl(), {method: method, parameters: url.getParameters(), onSuccess: this.ajaxResponse.bind(this), onFailure: this.ajaxError.bind(this), onException: this.ajaxException.bind(this) });
 			return true;
 		}
 	},
@@ -246,7 +246,7 @@ var WJSpin = Class.create({
 	 **/
 	ajaxError: function(response) {
 		var called = false;
-		if (this.multi) { 
+		if (this.multi) {
 			// not good, call all error handlers
 			for (var i = 0; i < this.errorcallback.length; i++) {
 				if (typeof(this.errorcallback[i][response.status]) == "function") {
@@ -277,6 +277,19 @@ var WJSpin = Class.create({
 				WJDebugger.log(WJDebugger.WARNING, "Unhandled error in WJSpin", response);
 			}
 		}
+	},
+
+	/**
+	 * ajaxException
+	 *
+	 * Log exceptions
+	 *
+	 * @since Fri Apr 13 2012
+	 * @access public
+	 * @return void
+	 **/
+	ajaxException: function(exception) {
+		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", exception);
 	},
 
 	/**
@@ -314,9 +327,9 @@ var WJSpin = Class.create({
 			}
 		}
 		else if (response.getHeader("content-type").indexOf("xml") != -1) {
-			if (document.importNode && response.responseXML.cloneNode(true) != null) {
+			if (document.importNode && response.responseXML.documentElement.cloneNode(true) != null) {
 				this._updateHtmlElementsWithXML(response.responseXML.documentElement.cloneNode(true) );
-				this._callCallbacks(response.responseXML.cloneNode(true) );
+				this._callCallbacks(response.responseXML.documentElement.cloneNode(true).ownerDocument );
 			}
 			else if (response.responseXML.documentElement.xml != undefined) {
 				this._updateHtmlElementsWithPlain(response.responseXML.documentElement.xml);
