@@ -6123,7 +6123,7 @@ var WJSpin = Class.create({
 					this.errorcallback[i] = errorcallback;
 				}
 			}
-			this.lastRequest = new Ajax.Request(url, {method: method, parameters: parameters, onSuccess: this.ajaxResponse.bind(this), onFailure: this.ajaxError.bind(this)});
+			this.lastRequest = new Ajax.Request(url, {method: method, parameters: parameters, onSuccess: this.ajaxResponse.bind(this), onFailure: this.ajaxError.bind(this), onException: this.ajaxException.bind(this) });
 			this.spins = new Array();
 			return parameters.requests;
 		}
@@ -6175,8 +6175,8 @@ var WJSpin = Class.create({
 		}
 	},
 
-	ajaxException: function(exception) {
-		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", exception);
+	ajaxException: function(spin, exception) {
+		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", spin, exception);
 	},
 
 	fallbackErrorCallback: function(response) {
