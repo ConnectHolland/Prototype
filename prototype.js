@@ -6072,7 +6072,7 @@ var WJSpin = Class.create({
 		callback.push(function(form) {Event.stopObserving(form, "submit", this._formObserver);}.bind(this, form) );
 
 		document.fire("form:beforesubmit", {"wjspin": this} );
-		this.content(new WJUrl(this.formdata), callback, errorcallback, form.method);
+		this.content(new WJUrl(this.formdata, form.action), callback, errorcallback, form.method);
 		document.fire("form:aftersubmit", {"wjspin": this} );
 
 		Event.stop(event);
