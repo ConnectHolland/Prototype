@@ -2525,24 +2525,12 @@ Element.Methods = {
       return styles.include('opacity') ?
         element.setOpacity(styles.match(/opacity:\s*(\d?\.?\d*)/)[1]) : element;
     }
-    for (var property in styles) {
-      if (property == 'opacity') {
-        element.setOpacity(styles[property]);
-      } else {
-        try {
-          elementStyle[(property == 'float' || property == 'cssFloat') ?
-            (Object.isUndefined(elementStyle.styleFloat) ? 'cssFloat' : 'styleFloat') :
-              property] = styles[property];
-        }
-        catch (e) {
-          if ( (property == "height" || property == "width") && parseInt(styles[property] ) < 0) {
-            elementStyle[property] = "0px";
-          }
-          else {
-            throw e;
-          }
-        }
-    }
+    for (var property in styles)
+      if (property == 'opacity') element.setOpacity(styles[property]);
+      else
+        elementStyle[(property == 'float' || property == 'cssFloat') ?
+          (Object.isUndefined(elementStyle.styleFloat) ? 'cssFloat' : 'styleFloat') :
+            property] = styles[property];
 
     return element;
   },
