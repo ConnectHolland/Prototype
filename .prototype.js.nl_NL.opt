@@ -6360,9 +6360,7 @@ var WJSpin = Class.create({
 			}
 
 			try {
-				if (WJSpin.defaultEval) {
-					htmlelements[i].innerHTML.evalScripts();
-				}
+				htmlelements[i].innerHTML.evalScripts();
 			}
 			catch (error) {
 			}
@@ -6432,8 +6430,6 @@ WJSpin.form = function(form, callback, errorcallback) {
 
 var WJUrl = Class.create();
 WJUrl.prototype = {
-	defaultEval: true, // set to false if you experience trouble with double eval-ed scripts in IE
-
 	initialize: function(parameters, url) {
 		this.url = url || "/index.php";
 		this.parameters = parameters || {};
