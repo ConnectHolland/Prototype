@@ -6016,8 +6016,6 @@ Element.addMethods();
 
 
 var WJSpin = Class.create({
-	defaultEval: true, // set to false if you experience trouble with double eval-ed scripts in IE
-
 	initialize: function() {
 		this.root = true;
 		this.htmlelement = null;
@@ -6362,9 +6360,7 @@ var WJSpin = Class.create({
 			}
 
 			try {
-				if (WJSpin.defaultEval) {
-					htmlelements[i].innerHTML.evalScripts();
-				}
+				htmlelements[i].innerHTML.evalScripts();
 			}
 			catch (error) {
 			}
