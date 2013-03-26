@@ -6323,6 +6323,7 @@ var WJSpin = Class.create({
 				htmlelements[i].innerHTML = "";
 				htmlelements[i].appendChild(element);
 			}
+			element.innerHTML.evalScripts();
 			stub = null; // avoid possible memory leaks in IE
 		}
 	},
