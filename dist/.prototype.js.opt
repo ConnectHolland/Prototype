@@ -6,13 +6,6 @@
  *
  *--------------------------------------------------------------------------*/
 
-gettext("Testje");
-
-dgettext('mydom', "Testje");
-
-dgettext("mydom", "Testje");
-
-
 var Prototype = {
 
   Version: '1.7',
