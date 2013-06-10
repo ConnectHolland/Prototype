@@ -297,14 +297,14 @@ var ProtoHistoryManager = Class.create({
 	getState: function() {
 		var state = this.getHash();
 		
-		if (this.iframe) {
+		/*if (this.iframe) {
 			var doc = this.iframe.contentWindow.document;
 			if (doc && doc.body.id == 'state') {
 				var istate = doc.body.innerText;
 				if (this.state == state) return istate;
 				this.istateOld = true;
 			} else return this.istate;
-		}
+		}*/
 		/*if (Prototype.Browser.WebKit && history.length != this.count) {
 			this.count = history.length;
 			return (this.states[this.count - 1] != undefined)?this.states[this.count - 1] != undefined:state;
@@ -329,7 +329,7 @@ var ProtoHistoryManager = Class.create({
 			top.location.hash = state || '#';
 		//}
 		
-		if (Prototype.Browser.IE && (!fix || this.istateOld)) {
+		/*if (Prototype.Browser.IE && (!fix || this.istateOld)) {
 			if (!this.iframe) {
 				this.iframe = new Element('iframe', {
 					'src': this.options.iframeSrc,
@@ -348,7 +348,7 @@ var ProtoHistoryManager = Class.create({
 				doc.close();
 				this.istateOld = false;
 			} catch(e) {};
-		}
+		}*/
 		this.state = state;
 	},
 
