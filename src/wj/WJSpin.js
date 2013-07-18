@@ -630,3 +630,6 @@ WJSpin.update = function(url, module, func, data, callback, errorcallback) {
 WJSpin.form = function(form, callback, errorcallback) {
 	return new WJSpin().form(form, callback, errorcallback);
 }
+WJSpin.submitForm = function(event, form, callback, errorcallback) {
+	return new WJSpin()._formSubmit(event, form, callback, errorcallback);
+}
