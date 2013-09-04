@@ -79,6 +79,7 @@ var Prototype = {
     var isOpera = Object.prototype.toString.call(window.opera) == '[object Opera]';
     return {
       IE:             !!window.attachEvent && !isOpera,
+      IEold:          !!window.attachEvent && !isOpera && ua.match(/MSIE\s+(?:6|7|8)\./),
       Opera:          isOpera,
       WebKit:         ua.indexOf('AppleWebKit/') > -1,
       Gecko:          ua.indexOf('Gecko') > -1 && ua.indexOf('KHTML') === -1,
