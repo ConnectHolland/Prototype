@@ -15,6 +15,7 @@ var Prototype = {
     var isOpera = Object.prototype.toString.call(window.opera) == '[object Opera]';
     return {
       IE:             !!window.attachEvent && !isOpera,
+      IEold:          !!window.attachEvent && !isOpera && ua.match(/MSIE\s+(?:6|7|8)\./),
       Opera:          isOpera,
       WebKit:         ua.indexOf('AppleWebKit/') > -1,
       Gecko:          ua.indexOf('Gecko') > -1 && ua.indexOf('KHTML') === -1,
@@ -2392,7 +2393,7 @@ Element.Methods = {
 
   readAttribute: function(element, name) {
     element = $(element);
-    if (Prototype.Browser.IE) {
+    if (Prototype.Browser.IEold) {
       var t = Element._attributeTranslations.read;
       if (t.values[name]) return t.values[name](element, name);
       if (t.names[name]) name = t.names[name];
@@ -2686,7 +2687,7 @@ if (Prototype.Browser.Opera) {
   );
 }
 
-else if (Prototype.Browser.IE) {
+else if (Prototype.Browser.IEold) {
   Element.Methods.getStyle = function(element, style) {
     element = $(element);
     style = (style == 'float' || style == 'cssFloat') ? 'styleFloat' : style.camelize();
@@ -2889,7 +2890,7 @@ else if (Prototype.Browser.IE) {
 
 }
 
-else if (Prototype.Browser.Gecko && /rv:1\.8\.0/.test(navigator.userAgent)) {
+else if (Prototype.Browser.Gecko && /rv:1\.8\.0/.test(navigator.userAgent) || document.all) {
   Element.Methods.setOpacity = function(element, value) {
     element = $(element);
     element.style.opacity = (value == 1) ? 0.999999 :
