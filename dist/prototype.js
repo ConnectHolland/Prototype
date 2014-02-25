@@ -6191,7 +6191,11 @@ var WJSpin = Class.create({
 	},
 
 	ajaxException: function(response, exception) {
-		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", response, exception.name + ": " + exception.message);
+		var info = exception.name + ": " + exception.message;
+		if (exception["stack"] ) {
+			info = exception.stack;
+		}
+		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", response, info);
 	},
 
 	fallbackErrorCallback: function(response) {
