@@ -7,8 +7,7 @@
  * @author Ron Rademaker
  **/
 
-var WJUrl = Class.create();
-WJUrl.prototype = {
+var WJUrl = Class.create( {
 	/**
 	 * initialize
 	 *
@@ -21,7 +20,7 @@ WJUrl.prototype = {
 	 * @return void
 	 **/
 	initialize: function(parameters, url) {
-		this.url = url || "/index.php";
+		this.url = url || WJUrl._BASEURL;
 		this.parameters = parameters || {};
 	},
 
@@ -154,5 +153,50 @@ WJUrl.prototype = {
 	 **/
 	clone: function() {
 		return new WJUrl(Object.clone(this.parameters), this.url);
+	},
+	
+	/**
+	 * toString
+	 *
+	 * Gives a string representation of this url
+	 *
+	 * @since Tue Feb 25 2014
+	 * @access public
+	 * @return string
+	 **/
+	toString: function() {
+		var result = this.url;
+		var query = Object.toQueryString(this.getParameters() );
+		if (query != "") {
+			result += "?" + query;
+		}
+		return result;
 	}
-}	
+});
+
+/**
+ * The base url used in WJUrl
+ *
+ * @since Tue Feb 25 2014
+ * @access protected
+ * @var string
+ **/
+WJUrl._BASEURL = "/index.php";
+
+/**
+ * fromString
+ *
+ * Simple method to create a WJUrl from a string
+ *
+ * @since Tue Feb 25 2014
+ * @access public
+ * @param String string
+ * @return WJUrl
+ **/
+WJUrl.fromString = function(string) {
+	var url = WJUrl._BASEURL;
+	if (string.indexOf("?") > -1) {
+		url = string.split("?").first();
+	}
+	return new WJUrl(string.toQueryParams(), url);
+}

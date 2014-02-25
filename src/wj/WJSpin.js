@@ -288,8 +288,8 @@ var WJSpin = Class.create({
 	 * @access public
 	 * @return void
 	 **/
-	ajaxException: function(spin, exception) {
-		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", spin, exception);
+	ajaxException: function(response, exception) {
+		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", response, exception.name + ": " + exception.message);
 	},
 
 	/**
