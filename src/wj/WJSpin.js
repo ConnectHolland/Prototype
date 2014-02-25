@@ -50,6 +50,7 @@ var WJSpin = Class.create({
 	 * @todo refactor
 	 **/
 	content: function(url, callback, errorcallback, method, rootSpin) {
+		url = Object.isString(url) ? WJUrl.fromString(url) : url;
 		this._saveLastCall(arguments);
 		var method = method || "post";
 		if (this.root && this.multi) {
@@ -550,6 +551,7 @@ var WJSpin = Class.create({
 	 * @return void
 	 **/
 	update: function(url, module, func, data, callback, errorcallback) {
+		url = Object.isString(url) ? WJUrl.fromString(url) : url;
 		var parameters = {};
 		Object.extend(parameters, url.getParameters() || { });
 		var _url = new WJUrl(parameters, url.getUrl() );
