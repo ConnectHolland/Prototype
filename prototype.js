@@ -6189,8 +6189,8 @@ var WJSpin = Class.create({
 		}
 	},
 
-	ajaxException: function(spin, exception) {
-		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", spin, exception);
+	ajaxException: function(response, exception) {
+		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", response, exception.name + ": " + exception.message);
 	},
 
 	fallbackErrorCallback: function(response) {
@@ -6433,10 +6433,9 @@ WJSpin.submitForm = function(event, form, callback, errorcallback) {
 	return new WJSpin()._formSubmit(event, form, callback, errorcallback);
 }
 
-var WJUrl = Class.create();
-WJUrl.prototype = {
+var WJUrl = Class.create( {
 	initialize: function(parameters, url) {
-		this.url = url || "/index.php";
+		this.url = url || WJUrl._BASEURL;
 		this.parameters = parameters || {};
 	},
 
@@ -6483,7 +6482,26 @@ WJUrl.prototype = {
 
 	clone: function() {
 		return new WJUrl(Object.clone(this.parameters), this.url);
+	},
+
+	toString: function() {
+		var result = this.url;
+		var query = Object.toQueryString(this.getParameters() );
+		if (query != "") {
+			result += "?" + query;
+		}
+		return result;
 	}
+});
+
+WJUrl._BASEURL = "/index.php";
+
+WJUrl.fromString = function(string) {
+	var url = WJUrl._BASEURL;
+	if (string.indexOf("?") > -1) {
+		url = string.split("?").first();
+	}
+	return new WJUrl(string.toQueryParams(), url);
 }
 WJCookie = Class.create({
 	initialize: function(timeout) {
