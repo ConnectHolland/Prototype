@@ -6029,6 +6029,7 @@ var WJSpin = Class.create({
 	},
 
 	content: function(url, callback, errorcallback, method, rootSpin) {
+		url = Object.isString(url) ? WJUrl.fromString(url) : url;
 		this._saveLastCall(arguments);
 		var method = method || "post";
 		if (this.root && this.multi) {
@@ -6189,8 +6190,12 @@ var WJSpin = Class.create({
 		}
 	},
 
-	ajaxException: function(spin, exception) {
-		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", spin, exception);
+	ajaxException: function(response, exception) {
+		var info = exception.name + ": " + exception.message;
+		if (exception["stack"] ) {
+			info = exception.stack;
+		}
+		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", response, info);
 	},
 
 	fallbackErrorCallback: function(response) {
@@ -6370,6 +6375,7 @@ var WJSpin = Class.create({
 	},
 
 	update: function(url, module, func, data, callback, errorcallback) {
+		url = Object.isString(url) ? WJUrl.fromString(url) : url;
 		var parameters = {};
 		Object.extend(parameters, url.getParameters() || { });
 		var _url = new WJUrl(parameters, url.getUrl() );
@@ -6433,10 +6439,9 @@ WJSpin.submitForm = function(event, form, callback, errorcallback) {
 	return new WJSpin()._formSubmit(event, form, callback, errorcallback);
 }
 
-var WJUrl = Class.create();
-WJUrl.prototype = {
+var WJUrl = Class.create( {
 	initialize: function(parameters, url) {
-		this.url = url || "/index.php";
+		this.url = url || WJUrl._BASEURL;
 		this.parameters = parameters || {};
 	},
 
@@ -6483,7 +6488,26 @@ WJUrl.prototype = {
 
 	clone: function() {
 		return new WJUrl(Object.clone(this.parameters), this.url);
+	},
+
+	toString: function() {
+		var result = this.url;
+		var query = Object.toQueryString(this.getParameters() );
+		if (query != "") {
+			result += "?" + query;
+		}
+		return result;
 	}
+});
+
+WJUrl._BASEURL = "/index.php";
+
+WJUrl.fromString = function(string) {
+	var url = WJUrl._BASEURL;
+	if (string.indexOf("?") > -1) {
+		url = string.split("?").first();
+	}
+	return new WJUrl(string.toQueryParams(), url);
 }
 WJCookie = Class.create({
 	initialize: function(timeout) {
