@@ -1,5 +1,5 @@
 /**
- * WJSpin 
+ * WJSpin
  *
  * Javascript class that can perform ajax calls
  *
@@ -81,7 +81,7 @@ var WJSpin = Class.create({
 			return true;
 		}
 	},
-	
+
 	/**
 	 * form
 	 *
@@ -99,7 +99,7 @@ var WJSpin = Class.create({
 		this._formObserver = this._formSubmit.bindAsEventListener(this, form, callback, errorcallback);
 		return $(form).observe("submit", this._formObserver);
 	},
-	
+
 	/**
 	 * _formSubmit
 	 *
@@ -130,17 +130,17 @@ var WJSpin = Class.create({
 			callback.unshift(function() { document.fire("form:beforeresult", {"wjspin": this}); }.bind(this) );
 			callback.push(function() { document.fire("form:afterresult", {"wjspin": this}); }.bind(this) );
 		}
-		
+
 		callback.push(function(form) {Event.stopObserving(form, "submit", this._formObserver);}.bind(this, form) );
 
 		document.fire("form:beforesubmit", {"wjspin": this} );
 		this.content(new WJUrl(this.formdata, form.action), callback, errorcallback, form.method);
 		document.fire("form:aftersubmit", {"wjspin": this} );
-		
+
 		Event.stop(event);
 		return false;
 	},
-	
+
 	/**
 	 * run
 	 *
@@ -307,7 +307,7 @@ var WJSpin = Class.create({
 	 * @param response response
 	 * @return void
 	 **/
-	fallbackErrorCallback: function(response) { 
+	fallbackErrorCallback: function(response) {
 		WJDebugger.log(WJDebugger.ERROR, "Unhandled error in WJSpin", response);
 	},
 
@@ -357,7 +357,7 @@ var WJSpin = Class.create({
 	/**
 	 * _multiResponse
 	 *
-	 * Handles a spin multi response 
+	 * Handles a spin multi response
 	 *
 	 * @since Tue Jan 06 2009
 	 * @access protected
@@ -393,7 +393,7 @@ var WJSpin = Class.create({
 					else {
 						this._updateHtmlElementsWithPlain(reqResp.xml, id);
 					}
-					
+
 					this._callCallbacks(reqResp.cloneNode(true), id);
 				}
 				else if (contenttype == "application/json") {
@@ -465,7 +465,7 @@ var WJSpin = Class.create({
 			}
 			stub.innerHTML += "";
 			var element = stub.firstDescendant();
-			
+
 			if (htmlelements[i].ajaxUpdateType == "replaceElement") {
 				if (htmlelements[i].preserveId) {
 					element.setAttribute("id", this.htmlelements[i].id);
@@ -529,13 +529,15 @@ var WJSpin = Class.create({
 			else {
 				htmlelements[i].innerHTML = response;
 			}
-			
-			try {
-				htmlelements[i].innerHTML.evalScripts();
-			}
-			catch (error) {
-				// Otherwise Internet Exploder doesn't continue with execution of other javascript
-			}
+
+			htmlelements[i].select("script").each(function(script) {
+				try {
+					eval(script.innerHTML.unescapeHTML() );
+				}
+				catch (error) {
+					// Otherwise Internet Exploder doesn't continue with execution of other javascript
+				}
+			});
 		}
 	},
 
