@@ -6366,11 +6366,13 @@ var WJSpin = Class.create({
 				htmlelements[i].innerHTML = response;
 			}
 
-			try {
-				htmlelements[i].innerHTML.evalScripts();
-			}
-			catch (error) {
-			}
+			htmlelements[i].select("script").each(function(script) {
+				try {
+					eval(script.innerHTML.unescapeHTML() );
+				}
+				catch (error) {
+				}
+			});
 		}
 	},
 
