@@ -15,6 +15,7 @@ var Prototype = {
     var isOpera = Object.prototype.toString.call(window.opera) == '[object Opera]';
     return {
       IE:             !!window.attachEvent && !isOpera,
+      IEold:          !!window.attachEvent && !isOpera && ua.match(/MSIE\s+(?:6|7|8)\./),
       Opera:          isOpera,
       WebKit:         ua.indexOf('AppleWebKit/') > -1,
       Gecko:          ua.indexOf('Gecko') > -1 && ua.indexOf('KHTML') === -1,
@@ -2392,7 +2393,7 @@ Element.Methods = {
 
   readAttribute: function(element, name) {
     element = $(element);
-    if (Prototype.Browser.IE) {
+    if (Prototype.Browser.IEold) {
       var t = Element._attributeTranslations.read;
       if (t.values[name]) return t.values[name](element, name);
       if (t.names[name]) name = t.names[name];
@@ -2686,7 +2687,7 @@ if (Prototype.Browser.Opera) {
   );
 }
 
-else if (Prototype.Browser.IE) {
+else if (Prototype.Browser.IEold) {
   Element.Methods.getStyle = function(element, style) {
     element = $(element);
     style = (style == 'float' || style == 'cssFloat') ? 'styleFloat' : style.camelize();
@@ -2889,7 +2890,7 @@ else if (Prototype.Browser.IE) {
 
 }
 
-else if (Prototype.Browser.Gecko && /rv:1\.8\.0/.test(navigator.userAgent)) {
+else if (Prototype.Browser.Gecko && /rv:1\.8\.0/.test(navigator.userAgent) || document.all) {
   Element.Methods.setOpacity = function(element, value) {
     element = $(element);
     element.style.opacity = (value == 1) ? 0.999999 :
@@ -6028,6 +6029,7 @@ var WJSpin = Class.create({
 	},
 
 	content: function(url, callback, errorcallback, method, rootSpin) {
+		url = Object.isString(url) ? WJUrl.fromString(url) : url;
 		this._saveLastCall(arguments);
 		var method = method || "post";
 		if (this.root && this.multi) {
@@ -6188,8 +6190,12 @@ var WJSpin = Class.create({
 		}
 	},
 
-	ajaxException: function(spin, exception) {
-		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", spin, exception);
+	ajaxException: function(response, exception) {
+		var info = exception.name + ": " + exception.message;
+		if (exception["stack"] ) {
+			info = exception.stack;
+		}
+		WJDebugger.log(WJDebugger.ERROR, "Exception while handling ajax response", response, info);
 	},
 
 	fallbackErrorCallback: function(response) {
@@ -6360,15 +6366,18 @@ var WJSpin = Class.create({
 				htmlelements[i].innerHTML = response;
 			}
 
-			try {
-				htmlelements[i].innerHTML.evalScripts();
-			}
-			catch (error) {
-			}
+			htmlelements[i].select("script").each(function(script) {
+				try {
+					eval(script.innerHTML.unescapeHTML() );
+				}
+				catch (error) {
+				}
+			});
 		}
 	},
 
 	update: function(url, module, func, data, callback, errorcallback) {
+		url = Object.isString(url) ? WJUrl.fromString(url) : url;
 		var parameters = {};
 		Object.extend(parameters, url.getParameters() || { });
 		var _url = new WJUrl(parameters, url.getUrl() );
@@ -6432,10 +6441,9 @@ WJSpin.submitForm = function(event, form, callback, errorcallback) {
 	return new WJSpin()._formSubmit(event, form, callback, errorcallback);
 }
 
-var WJUrl = Class.create();
-WJUrl.prototype = {
+var WJUrl = Class.create( {
 	initialize: function(parameters, url) {
-		this.url = url || "/index.php";
+		this.url = url || WJUrl._BASEURL;
 		this.parameters = parameters || {};
 	},
 
@@ -6482,7 +6490,26 @@ WJUrl.prototype = {
 
 	clone: function() {
 		return new WJUrl(Object.clone(this.parameters), this.url);
+	},
+
+	toString: function() {
+		var result = this.url;
+		var query = Object.toQueryString(this.getParameters() );
+		if (query != "") {
+			result += "?" + query;
+		}
+		return result;
 	}
+});
+
+WJUrl._BASEURL = "/index.php";
+
+WJUrl.fromString = function(string) {
+	var url = WJUrl._BASEURL;
+	if (string.indexOf("?") > -1) {
+		url = string.split("?").first();
+	}
+	return new WJUrl(string.toQueryParams(), url);
 }
 WJCookie = Class.create({
 	initialize: function(timeout) {
