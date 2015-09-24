@@ -1,0 +1,1 @@
+if(typeof(Prototype)=="undefined"){var s=document.getElementsByTagName("script");document.write("<script src='"+s[s.length-1].src.replace(/(prototype)_autoload(\.js)$/,"$1$2") + "' type='text/javascript'></script>");}
